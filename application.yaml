@@ -1,0 +1,164 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: generate-report-service
+spec:
+  ports:
+    - name: http-8010
+      port: 8010
+      targetPort: 8010
+  selector:
+    app: generate-report
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: generate-report-deployment
+spec:
+  revisionHistoryLimit: 3
+  replicas: 1
+  selector:
+    matchLabels:
+      app: generate-report
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: generate-report
+        version: v1
+        istio: monitor
+    spec:
+      volumes:
+        - name: app-data
+          persistentVolumeClaim:
+            claimName: my-local-claim-1
+        - name: fonts
+          persistentVolumeClaim:
+            claimName: my-local-claim-2
+        - name: reports
+          persistentVolumeClaim:
+            claimName: my-local-claim-3
+      containers:
+        - name: generate-report
+          image: report-manager-generate-service:14.0
+          imagePullPolicy: IfNotPresent
+          env: # Added environment variables
+            - name: SERVICE
+              value: generate-report-service
+            - name: VERSION
+              value: v1
+#          resources:
+#            requests:
+#              cpu: "200m"
+#              memory: "2Gi"
+#            limits:
+#              cpu: "500m"
+#              memory: "4Gi"
+          ports:
+            - name: http
+              containerPort: 8010
+          volumeMounts:
+            - name: app-data
+              mountPath: /data01/Cloud/apps
+            - name: fonts
+              mountPath: /usr/share/fonts
+            - name: reports
+              mountPath: /data01/reportmanager_dump/apache-tomcat-9.0.64/ARTIFACTS_DUMPS/ReportManager
+
+---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: my-local-storage-10
+spec:
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: /data01/Cloud/apps
+    type: DirectoryOrCreate
+  storageClassName: standard
+
+---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: my-local-storage-20
+spec:
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: /usr/font
+    type: DirectoryOrCreate
+  storageClassName: standard
+
+---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: my-local-storage-30
+spec:
+  capacity:
+    storage: 3Gi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: /data01/reportmanager_dump/apache-tomcat-9.0.64/ARTIFACTS_DUMPS/ReportManager
+    type: DirectoryOrCreate
+  storageClassName: standard
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: my-local-claim-1
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 500Mi
+  volumeMode: Filesystem
+  storageClassName: standard
+  volumeName: my-local-storage-10
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: my-local-claim-2
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 500Mi
+  volumeMode: Filesystem
+  storageClassName: standard
+  volumeName: my-local-storage-20
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: my-local-claim-3
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+  volumeMode: Filesystem
+  storageClassName: standard
+  volumeName: my-local-storage-30
