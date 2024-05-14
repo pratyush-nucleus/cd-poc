@@ -1,6 +1,19 @@
 apiVersion: v1
 kind: Service
 metadata:
+  name: generate-report-service2
+spec:
+  ports:
+    - name: http-8010
+      port: 8010
+      targetPort: 8010
+  selector:
+    app: generate-report
+
+---
+apiVersion: v1
+kind: Service
+metadata:
   name: generate-report-service
 spec:
   ports:
